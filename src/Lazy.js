@@ -23,34 +23,34 @@ function Lazy(arg, debugMode) {
 		return true;
 	};
 
-	return {
-		Add: function Add(fn) {
+	var object = {
+		add: function Add(fn) {
 			$this.__order__.push('ADD');
 			$this.__add__(fn);
 			return this;
 		},
-		Stack: function Stack(functions) {
-			for (var i = 0; i < functions.length; i++)
+		stack: function Stack(functions) {
+						for (var i = 0; i < functions.length; i++)
 				$this.__add__(functions[i]);
 			return this;
 		},
-		Where: function Where(condition) {
+		where: function Where(condition) {
 			$this.__order__.push('WHERE');
 			$this.__add__(function Filter(collection) { return collection.filter(condition); });
 			return this;
 		},
-		Get: function Get(condition) {
+		get: function Get(condition) {
 			$this.__order__.push('GET');
 			$this.__add__(function Select(collection) { return collection.map(condition); });
 			return this;
 		},
-		First: function First(condition) {
+		first: function First(condition) {
 			$this.__order__.push('FIRST');
-			var reduceCondition = condition || (function (x) { return x; });
+			var reduceCondition = condition || (function (x, i) { if (i == 0) return true; });
 			$this.__add__(function SelectFirst(collection) { return collection.filter(reduceCondition).pop() });
 			return this;
 		},
-		Invoke: function Invoke() {
+		invoke: function Invoke() {
 			var result = arg;
 			var ellapsedTime = 0;
 			if (debugMode) $this.Print(result);
