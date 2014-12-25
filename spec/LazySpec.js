@@ -8,19 +8,18 @@ catch (e) {
 
 try {
 	function exactEquality(arr1, arr2) {
-		var equals = true;
+		var list = arr1.sort();
+		var resultList = arr2.sort();
 
-			var list = arr1.sort();
-			var resultList = arr2.sort();
+		for (var i = 0; i < (list.length + resultList.length) / 2; i++) {
+			if ((list[i] || -1 ) != (resultList[i] || -1))
+				return false;
+		}
 
-			for (var i = 0; i < (list.length + resultList.length) / 2; i++) {
-				equals = equals && ((list[i] || -1 ) === (resultList[i] || -1));
-			}
-
-			return equals;
+		return true;
 	};
 
-	describe("Lazy.js functionality", function() {
+	describe("Lazy", function() {
 		var lazy;
 		var DefaultData = [1, 2, 3, 4, 5, 6, 7];
 		
@@ -80,11 +79,15 @@ try {
 			expect(equals).toEqual(true);
 		});
 
-		it("should invoke itself if requested for comparission without the invoke", function() {
+		it("should invoke itself if requested without explicit invoke", function() {
 			var number = 6;
 			var result = lazy.first(function (x) { return x == 6; });
 			var equals = (number == result);
+
 			expect(equals).toEqual(true);
+			expect(result - number).toEqual(0);
+			expect(result + number).toEqual(12);
+			expect(exactEquality(DefaultData, lazy)).toEqual(true);
 		});
 	});
 }
