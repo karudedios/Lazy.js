@@ -78,10 +78,13 @@ function Lazy(arg, debugMode) {
 			}
 
 			if (result) {
-				var Invoker = this;
-				result.Invoker = function Invoker() { return new Lazy(result, debugMode); };
+				var invoker = this;
+				result.invoker = function Invoker() { return new Lazy(result, debugMode); };
 			}
 			return result;
 		}
 	}
+	object.toString= object.invoke;
+	object.valueOf = object.invoke;
+	return object;
 };
