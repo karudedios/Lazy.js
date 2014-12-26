@@ -10,11 +10,13 @@ function exactEquality(arr1, arr2) {
 };
 
 describe("Lazy", function() {
-	var lazy;
-	var DefaultData = [1, 2, 3, 4, 5, 6, 7];
+	var lazy, strLazy;
+	var DefaultData = [1, 2, 3, 4, 5, 6, 7]
+		, DefaultStr = "This is a String";
 	
 	beforeEach(function() {
 		lazy = new Lazy(DefaultData);
+		strLazy = new Lazy(DefaultStr);
 	});
 
 	it("should return the same collection if invoked without any specification", function(){
@@ -80,8 +82,8 @@ describe("Lazy", function() {
 
 	it("should require explicit invoke when working with collections", function() {
 		var result = lazy;
-		expect(result.length + 1).toBeFalsy();
-		expect(result.invoke().length + 	1).toBeTruthy();
+		expect(+result.length).toBeFalsy();
+		expect(+result.invoke().length).toBeTruthy();
 	});
 
 	it("should have an 'invoker' on return if object is not 'single'", function() {
@@ -92,5 +94,19 @@ describe("Lazy", function() {
 		var data = lazy.first();
 		var lazyd = DefaultData.toLazy().first();
 		expect(data.invoke()).toEqual(lazyd.invoke());
+	});
+
+	it("should work with strings", function (){
+		var result = strLazy.add(function (x) { return x.toUpperCase() }).invoke();
+		expect(DefaultStr.toUpperCase() == result).toBeTruthy();
+	});
+
+	it("should take as specified", function () {
+		var takeFive = exactEquality(
+			DefaultData.filter(function (x) { return x <= 5 }),
+			lazy.take(5).invoke()
+		);
+
+		expect(takeFive).toBeTruthy();
 	});
 });
