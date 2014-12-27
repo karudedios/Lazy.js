@@ -11,11 +11,10 @@ function exactEquality(arr1, arr2) {
 
 describe("Lazy", function() {
 	var lazy, strLazy;
-	var DefaultData, DefaultStr;
+	var DefaultData = [1, 2, 3, 4, 5, 6, 7]
+		, DefaultStr = "This is a String";
 	
 	beforeEach(function() {
-		DefaultData = [1, 2, 3, 4, 5, 6, 7];
-		DefaultStr = "This is a String";
 		lazy = new Lazy(DefaultData);
 		strLazy = new Lazy(DefaultStr);
 	});
