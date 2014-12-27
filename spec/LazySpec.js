@@ -11,10 +11,11 @@ function exactEquality(arr1, arr2) {
 
 describe("Lazy", function() {
 	var lazy, strLazy;
-	var DefaultData = [1, 2, 3, 4, 5, 6, 7]
-		, DefaultStr = "This is a String";
+	var DefaultData, DefaultStr;
 	
 	beforeEach(function() {
+		DefaultData = [1, 2, 3, 4, 5, 6, 7];
+		DefaultStr = "This is a String";
 		lazy = new Lazy(DefaultData);
 		strLazy = new Lazy(DefaultStr);
 	});
@@ -102,11 +103,40 @@ describe("Lazy", function() {
 	});
 
 	it("should take as specified", function () {
-		var takeFive = exactEquality(
-			DefaultData.filter(function (x) { return x <= 5 }),
-			lazy.take(5).invoke()
-		);
-
+		var data = DefaultData.filter(function (x) { return x <= 5 });
+		var result = lazy.take(5).invoke();
+		var takeFive = exactEquality(data, result);
 		expect(takeFive).toBeTruthy();
+	});
+
+	it("should skip as specified", function () {
+		var data = DefaultData.filter(function (x) { return x > 5 });
+		var result = lazy.skip(5).invoke();
+		var equals = exactEquality(data, result);
+		expect(equals).toBeTruthy();
+	});
+
+	it("should be able to mix skip and take", function () {
+		var data = DefaultData.splice(4, 3).splice(0, 2);
+		var result = lazy.skip(4).take(2).invoke();
+		var equals = exactEquality(data, result);
+		expect(equals).toBeTruthy();
+	});
+
+	it("should not have reference to the collection, but a deep copy", function(){
+		var data = DefaultData.splice(7, 0);
+		var result = lazy.skip(7).invoke();
+		var equals = exactEquality(data, result);
+		expect(equals).toBeTruthy();
+	});
+
+	it("should not allow anything but collections and strings", function() {
+		var invalid1 = 1;
+		var invalidObject = {0:0, 1:1};
+		var validCollection = [{ 0:0 }, { 1:1 }];
+		
+		expect(new Lazy(invalid1).invoke()).toBeFalsy();
+		expect(new Lazy(invalidObject).invoke()).toBeFalsy();
+		expect(new Lazy(validCollection).invoke()).toBeTruthy();
 	});
 });
