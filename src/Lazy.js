@@ -1,90 +1,101 @@
-function Lazy(arg, debugMode) {
-	var $this = this;
-	$this.__stack__ = { fn : [] };
-	$this.__order__ = [];
+Array.prototype.where = function(condition) {
+	return this.toLazy().where(condition);
+}
+Array.prototype.select = function(condition) {
+	return this.toLazy().select(condition);
+}
+Array.prototype.first = function(condition) {
+	return this.toLazy().first(condition);
+}
+Array.prototype.last = function(condition) {
+	return this.toLazy().last(condition);
+}
+Array.prototype.toLazy = function() {
+	return new Lazy(this);
+}
 
-	$this.__clear__ = function () {
-		$this.__stack__ = { fn : [] };
-		$this.__order__ = [];
-		return this;
-	};
-	$this.__add__ = function(Function)
-	{
-		if (debugMode) $this.Print("Stacking clause");
-		return $this.__stack__.fn.push(Function);
+function Lazy(arg, debugMode, currentStack) {
+	var stack = currentStack && currentStack.slice() || [];
+
+	var add = function(Function) {
+		Print("Stacking clause: " + Function.name);
+		stack.push(Function);
+		return;
 	}
-	$this.Print = function (x) {
-		return console.log(x);
-	}
 
-	$this.__verify__ = function (collection) {
-		if (!collection || !collection.length)
-			return false;
-		return true;
-	};
-
-	var object = {
-		add: function Add(fn) {
-			$this.__order__.push('ADD');
-			$this.__add__(fn);
-			return this;
-		},
-		stack: function Stack(functions) {
-						for (var i = 0; i < functions.length; i++)
-				$this.__add__(functions[i]);
-			return this;
-		},
-		where: function Where(condition) {
-			$this.__order__.push('WHERE');
-			$this.__add__(function Filter(collection) { return collection.filter(condition); });
-			return this;
-		},
-		get: function Get(condition) {
-			$this.__order__.push('GET');
-			$this.__add__(function Select(collection) { return collection.map(condition); });
-			return this;
-		},
-		first: function First(condition) {
-			$this.__order__.push('FIRST');
-			var reduceCondition = condition || (function (x, i) { if (i == 0) return true; });
-			$this.__add__(function SelectFirst(collection) { return collection.filter(reduceCondition).pop() });
-			return this;
-		},
-		invoke: function Invoke() {
-			var result = arg;
-			var ellapsedTime = 0;
-			if (debugMode) $this.Print(result);
-
-			for (var i = 0; i < $this.__order__.length; i++) {
-				if ($this.__verify__(result)) {
-					if (!$this.__stack__.fn[i]){
-						continue;
-					}
-
-					result = $this.__stack__.fn[i].call(null, result);
-					if (debugMode) $this.Print(result);
-				} else {
-					var clause = $this.__order__[i];
-					var method = $this.__stack__.fn[i];
-					var message = "Argument must be a collection\n";
-					message += "Exception ocurred at Invoke for value ";
-					message += result;
-					message += "\nWhile executing\n"
-					message += clause;
-					message += " at ";
-					message += method;
-					throw message;
-				}
-			}
-
-			if (result) {
-				var invoker = this;
-				result.invoker = function Invoker() { return new Lazy(result, debugMode); };
-			}
-			return result;
+	var Print = function (x) {
+		if (debugMode) {
+			console.log(x);
 		}
+
+		return;
 	}
-	object.toString= object.invoke;
-	object.valueOf = object.invoke;
-	return object;
+
+	this.where = function Where(condition) {
+		var currStack = stack.slice();
+
+		currStack.push(function Where(collection) { return collection.filter(condition); })
+		return new Lazy(arg, debugMode, currStack);
+	};
+
+	this.select = function Select(condition) {
+		var currStack = stack.slice();
+
+		currStack.push(function Select(collection) { return collection.map(condition); })
+		return new Lazy(arg, debugMode, currStack);
+	};
+
+	this.first = function First(condition) {
+		var currStack = stack.slice();		
+		var firstCondition = condition || (function (x, i) { return i == 0; });
+
+		currStack.push(function First(collection) { return collection.filter(firstCondition).shift() })
+		return new Lazy(arg, debugMode, currStack).invoke();
+	};
+
+	this.last = function Last(condition) {
+		var currStack = stack.slice();
+		var lastCondition = condition || (function (x, i, arr) { return i == arr.length - 1; });
+
+		currStack.push(function Last(collection) { return collection.filter(lastCondition).pop() })
+		return new Lazy(arg, debugMode, currStack).invoke();
+	};
+
+	this.push = function Push(item) {
+		var currStack = stack.slice();
+
+		currStack.push(function Push(collection) { return collection.concat([item]); });
+		return new Lazy(arg, debugMode, currStack);
+	}
+
+	this.invoke = function Invoke() {
+		var result = arg.slice();
+
+		Print("Initial value:");
+		Print(result);
+
+		while (operation = stack.shift()) {
+
+			if (!result || !result.length) {
+				throw ("Ignoring clause: " + operation.name + "\nArgument must be a collection.")
+				return null;
+			}
+
+			Print("Calling clause: " + operation.name)
+			result = operation.call(null, result);
+			Print(result);
+		}
+
+		return result;
+	};
 };
+
+Lazy.prototype.toString = function () {
+	return this.invoke().toString();
+}
+
+Lazy.prototype.valueOf = function () {
+	return this.invoke().toString();
+}
+
+module.exports = Lazy;
