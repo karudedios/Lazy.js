@@ -1,4 +1,4 @@
-var Lazy = require('./../src/Lazy.js').Lazy
+var Lazy = require('./../src/Lazy.js')
 
 function exactEquality(arr1, arr2) {
 	return (arr1 + '') == (arr2 + '');
@@ -6,12 +6,10 @@ function exactEquality(arr1, arr2) {
 
 describe("Lazy", function() {
 	var lazy, strLazy;
-	var DefaultData = [1, 2, 3, 4, 5, 6, 7]
-		, DefaultStr = "This is a String";
+	var DefaultData = [1, 2, 3, 4, 5, 6, 7];
 	
 	beforeEach(function() {
 		lazy = new Lazy(DefaultData);
-		strLazy = new Lazy(DefaultStr);
 	});
 
 	it("should return the same collection if invoked without any specification", function(){
@@ -22,9 +20,9 @@ describe("Lazy", function() {
 		expect(allExist).toBeTruthy();
 	});
 
-	it("should get the data transformed the way it's specified", function() {
+	it("should select the data transformed the way it's specified", function() {
 		var list = DefaultData.map(function(x) { return x * 2 });
-		var resultList = lazy.get(function (x) { return x * 2 }).invoke();
+		var resultList = lazy.select(function (x) { return x * 2 }).invoke();
 		var allExist = exactEquality(list, resultList);
 
 		expect(allExist).toBeTruthy();
@@ -39,30 +37,24 @@ describe("Lazy", function() {
 	});
 
 	it("should return first item if .first has no specified matching criteria", function() {
-		var result = lazy.first().invoke();
+		var result = lazy.first();
 		expect(result).toEqual(1);
 	});
 
 	it("should return first item matching the specified criteria", function () {
-		var result = lazy.first(function (x) { return x > 3 && x < 5 }).invoke();
+		var result = lazy.first(function (x) { return x > 3 && x < 5 });
 		expect(result).toEqual(4);
 	});
 
-	it("should have no difference between one stack and several add", function() {
+	it("should have chain methods", function() {
 		var result =
 		lazy
-			.add(function (x) { return x + 1 })
-			.add(function (x) { return x + 2 })
-			.invoke();
-		var result2 =
-		lazy
-			.stack(
-				[function (x) { return x + 1},
-				 function (x) { return x + 2 }])
+			.select(function (x) { return x + 1 })
+			.select(function (x) { return x + 2 })
+			.where(function(x) { return x < 9; })
 			.invoke();
 
-		var equals = (result == result2);
-		expect(equals).toBeTruthy();
+		expect(result + '').toEqual('4,5,6,7,8');
 	});
 
 	it("should invoke itself if requested without explicit invoke when comparing", function() {
@@ -81,19 +73,10 @@ describe("Lazy", function() {
 		expect(+result.invoke().length).toBeTruthy();
 	});
 
-	it("should have an 'invoker' on return if object is not 'single'", function() {
-		expect(lazy.invoke().invoker()).toBeTruthy();
-	});
-
 	it("should allow to Lazyfy a collection", function () {
 		var data = lazy.first();
 		var lazyd = DefaultData.toLazy().first();
-		expect(data.invoke()).toEqual(lazyd.invoke());
-	});
-
-	it("should work with strings", function (){
-		var result = strLazy.add(function (x) { return x.toUpperCase() }).invoke();
-		expect(DefaultStr.toUpperCase() == result).toBeTruthy();
+		expect(data).toEqual(lazyd);
 	});
 
 	it("should take as specified", function () {
@@ -111,26 +94,40 @@ describe("Lazy", function() {
 	});
 
 	it("should be able to mix skip and take", function () {
-		var data = DefaultData.splice(4, 3).splice(0, 2);
+		var data = DefaultData.slice(4).slice(0, 2);
 		var result = lazy.skip(4).take(2).invoke();
+
 		var equals = exactEquality(data, result);
 		expect(equals).toBeTruthy();
 	});
 
 	it("should not have reference to the collection, but a deep copy", function(){
-		var data = DefaultData.splice(7, 0);
+		var data = DefaultData.slice(7, 0);
 		var result = lazy.skip(7).invoke();
+
 		var equals = exactEquality(data, result);
 		expect(equals).toBeTruthy();
 	});
 
-	it("should not allow anything but collections and strings", function() {
-		var invalid1 = 1;
+	it("should not allow anything but collections", function() {
+		var invalidNumber = 1;
 		var invalidObject = {0:0, 1:1};
 		var validCollection = [{ 0:0 }, { 1:1 }];
+		var exception = "Argument must be a collection";
 		
-		expect(new Lazy(invalid1).invoke()).toBeFalsy();
-		expect(new Lazy(invalidObject).invoke()).toBeFalsy();
+		expect(function() { return new Lazy(invalidNumber).invoke(); }).toThrow(exception);
+		expect(function() { return new Lazy(invalidObject).invoke(); }).toThrow(exception);
 		expect(new Lazy(validCollection).invoke()).toBeTruthy();
+	});
+
+	it("should be present in Array.prototype", function() {
+		expect(Array.prototype.toLazy).toBeTruthy();		
+		expect(Array.prototype.last).toBeTruthy();
+		expect(Array.prototype.skip).toBeTruthy();
+		expect(Array.prototype.take).toBeTruthy();
+		expect(Array.prototype.first).toBeTruthy();
+		expect(Array.prototype.where).toBeTruthy();
+		expect(Array.prototype.union).toBeTruthy();
+		expect(Array.prototype.select).toBeTruthy();
 	});
 });

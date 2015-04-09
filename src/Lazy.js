@@ -1,3 +1,6 @@
+Array.prototype.toLazy = function() {
+	return new Lazy(this);
+}
 Array.prototype.where = function(condition) {
 	return this.toLazy().where(condition);
 }
@@ -10,11 +13,19 @@ Array.prototype.first = function(condition) {
 Array.prototype.last = function(condition) {
 	return this.toLazy().last(condition);
 }
-Array.prototype.toLazy = function() {
-	return new Lazy(this);
+Array.prototype.take = function(quantity) {
+	return this.toLazy().take(quantity);
+}
+Array.prototype.skip = function(quantity) {
+	return this.toLazy().skip(quantity);
+}
+Array.prototype.union = function(collection) {
+	return this.toLazy().union(collection);
 }
 
 function Lazy(arg, debugMode, currentStack) {
+	if (!(arg instanceof Array)) throw "Argument must be a collection";
+
 	var stack = currentStack && currentStack.slice() || [];
 
 	var add = function(Function) {
@@ -45,6 +56,20 @@ function Lazy(arg, debugMode, currentStack) {
 		return new Lazy(arg, debugMode, currStack);
 	};
 
+	this.take = function Take(quantity) {
+		var currStack = stack.slice();
+
+		currStack.push(function Take(collection) { return collection.slice(0, quantity); })
+		return new Lazy(arg, debugMode, currStack);
+	}
+
+	this.skip = function Skip(quantity) {
+		var currStack = stack.slice();
+
+		currStack.push(function Skip(collection) { return collection.slice(quantity); })
+		return new Lazy(arg, debugMode, currStack);
+	}
+
 	this.first = function First(condition) {
 		var currStack = stack.slice();		
 		var firstCondition = condition || (function (x, i) { return i == 0; });
@@ -68,8 +93,15 @@ function Lazy(arg, debugMode, currentStack) {
 		return new Lazy(arg, debugMode, currStack);
 	}
 
+	this.union = function Union(items) {
+		var currStack = stack.slice();
+
+		currStack.push(function Union(collection) { return collection.concat(items); });
+		return new Lazy(arg, debugMode, currStack);
+	}
+
 	this.invoke = function Invoke() {
-		var result = arg.slice();
+		var result = arg && arg.slice();
 
 		Print("Initial value:");
 		Print(result);
