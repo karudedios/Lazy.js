@@ -1,9 +1,4 @@
-try {
-	var fs = require('fs');
-	eval(fs.readFileSync('../src/Lazy.js') + '');
-} catch (e) {
-	console.error(e);
-};
+var Lazy = require('./../src/Lazy.js').Lazy
 
 function exactEquality(arr1, arr2) {
 	return (arr1 + '') == (arr2 + '');
