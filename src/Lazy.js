@@ -22,6 +22,12 @@ Array.prototype.skip = function(quantity) {
 Array.prototype.union = function(collection) {
 	return this.toLazy().union(collection);
 }
+Array.prototype.distinct = function(fn) {
+	return this.toLazy().distinct(fn);
+}
+Array.prototype.orderBy = function(fn, order) {
+	return this.toLazy().orderBy(fn, order);
+}
 
 function Lazy(arg, debugMode, currentStack) {
 	if (!(arg instanceof Array)) throw "Argument must be a collection";
@@ -45,14 +51,26 @@ function Lazy(arg, debugMode, currentStack) {
 	this.where = function Where(condition) {
 		var currStack = stack.slice();
 
-		currStack.push(function Where(collection) { return collection.filter(condition); })
+		if (typeof condition == "string") {
+			var fn = function Where(collection) { return collection.filter(function(x, i, self) { return eval(condition); }) }
+		} else {
+			var fn = function Where(collection) { return collection.filter(condition); };
+		}
+
+		currStack.push(fn)
 		return new Lazy(arg, debugMode, currStack);
 	};
 
 	this.select = function Select(condition) {
 		var currStack = stack.slice();
 
-		currStack.push(function Select(collection) { return collection.map(condition); })
+		if (typeof condition == "string") {
+			var fn = function Select(collection) { return collection.map(function(x, i, self) { return eval(condition); }) }
+		} else {
+			var fn = function Select(collection) { return collection.map(condition); };
+		}
+
+		currStack.push(fn);
 		return new Lazy(arg, debugMode, currStack);
 	};
 
@@ -72,7 +90,13 @@ function Lazy(arg, debugMode, currentStack) {
 
 	this.first = function First(condition) {
 		var currStack = stack.slice();		
-		var firstCondition = condition || (function (x, i) { return i == 0; });
+		var firstCondition = condition || (function (_, i) { return i == 0; });
+
+		if (typeof condition == "string") {
+			firstCondition = function(x, i) { return eval(condition); };
+		} else if(condition) {
+			firstCondition = condition;
+		}
 
 		currStack.push(function First(collection) { return collection.filter(firstCondition).shift() })
 		return new Lazy(arg, debugMode, currStack).invoke();
@@ -80,7 +104,13 @@ function Lazy(arg, debugMode, currentStack) {
 
 	this.last = function Last(condition) {
 		var currStack = stack.slice();
-		var lastCondition = condition || (function (x, i, arr) { return i == arr.length - 1; });
+		var lastCondition = condition || (function (_, i, arr) { return i == arr.length - 1; });
+
+		if (typeof condition == "string") {
+			lastCondition = function(x, i) { return eval(condition); };
+		} else if(condition) {
+			lastCondition = condition;
+		}
 
 		currStack.push(function Last(collection) { return collection.filter(lastCondition).pop() })
 		return new Lazy(arg, debugMode, currStack).invoke();
@@ -100,10 +130,45 @@ function Lazy(arg, debugMode, currentStack) {
 		return new Lazy(arg, debugMode, currStack);
 	}
 
-	this.distinct = function() {
+	this.orderBy = function OrderBy(fn, type) {
+		var currStack = stack.slice();
+		var orderByFn = function(a, b) { var fa=fn(a),fb=fn(b); return (fa < fb ? -1 : fb < fa ? 1 : 0) * (type == "desc" ? -1 : 1); }
+
+		currStack.push(function OrderBy(collection) { return collection.sort(orderByFn); });
+
+		var r = new Lazy(arg, debugMode, currStack);
+		r.thenBy = function ThenBy (func, order) {
+			var currStack = stack.slice();
+
+			var thenByFn = function(a, b) {
+				var fa=fn(a),fb=fn(b),fua=func(a),fub=func(b);
+				return fa == fb
+				 	? (fua < fub ? -1 : (fub < fua ? 1 : 0)) * (order == "desc" ? -1 : 1)
+				 	: (fa < fb ? -1 : (fb < fa ? 1 : 0)) * (type == "desc" ? -1 : 1)
+			  }
+
+			currStack.push(function ThenBy(collection) { return collection.sort(thenByFn); });
+			return new Lazy(arg, debugMode, currStack);	
+		}
+
+		return r;
+	}
+
+	this.distinct = function Distinct(fn) {
+		fn = fn || function(x) { return x; }
 		var currStack = stack.slice();
 
-		currStack.push(function Distinct(collection) { return collection.filter(function(obj, idx, self) { return self.indexOf(obj) == idx; }) });
+		if (typeof fn == "string") {
+			var func = function (x, i, self) {
+				return self.map(function(y) {
+					return eval("y" + (fn && "." + fn))
+				}).indexOf(eval("x" + (fn && "." + fn))) == i;
+			};
+		} else {
+			var func = function(obj, idx, self) { return self.map(fn).indexOf(fn(obj)) == idx; };
+		}
+
+		currStack.push(function Distinct(collection) { return collection.filter(func); });
 		return new Lazy(arg, debugMode, currStack);
 	}
 
