@@ -100,6 +100,13 @@ function Lazy(arg, debugMode, currentStack) {
 		return new Lazy(arg, debugMode, currStack);
 	}
 
+	this.distinct = function() {
+		var currStack = stack.slice();
+
+		currStack.push(function Distinct(collection) { return collection.filter(function(obj, idx, self) { return self.indexOf(obj) == idx; }) });
+		return new Lazy(arg, debugMode, currStack);
+	}
+
 	this.invoke = function Invoke() {
 		var result = arg && arg.slice();
 
