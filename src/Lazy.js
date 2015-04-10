@@ -52,12 +52,10 @@ function Lazy(arg, debugMode, currentStack) {
 		var currStack = stack.slice();
 
 		if (typeof condition == "string") {
-			var fn = function Where(collection) { return collection.filter(function(x, i, self) { return eval(condition); }) }
-		} else {
-			var fn = function Where(collection) { return collection.filter(condition); };
+			var fn = function(x, i, self) { return eval(condition); };
 		}
 
-		currStack.push(fn)
+		currStack.push(function Where(collection) { return collection.filter(fn || condition); });
 		return new Lazy(arg, debugMode, currStack);
 	};
 
@@ -65,12 +63,10 @@ function Lazy(arg, debugMode, currentStack) {
 		var currStack = stack.slice();
 
 		if (typeof condition == "string") {
-			var fn = function Select(collection) { return collection.map(function(x, i, self) { return eval(condition); }) }
-		} else {
-			var fn = function Select(collection) { return collection.map(condition); };
+			var fn = function(x, i, self) { return eval(condition); };
 		}
 
-		currStack.push(fn);
+		currStack.push(function Select(collection) { return collection.map(fn || condition) });
 		return new Lazy(arg, debugMode, currStack);
 	};
 
