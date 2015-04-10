@@ -58,10 +58,10 @@ function Lazy(arg, debugMode, currentStack) {
 		var combinations = lambda.match(/\(?([^\)]*)\)? ?=> ?(.*)/);
 		if (combinations && combinations[1]) {
 			var vars = combinations[1].split(",");
-			var action = combinations[2].replace(vars[0] && (new RegExp(vars[0], "g")) || null, "x").replace(vars[1] && (new RegExp(vars[1], "g")) || null, "i");
+			var action = combinations[2].replace(vars[0] && (new RegExp(vars[0].trim(), "g")) || null, "$value").replace(vars[1] && (new RegExp(vars[1], "g")) || null, "$index");
 
-			return function(x, i) {
-				return eval(action);
+			return function($value, $index) {
+				return eval("(" + action + ")");
 			}
 
 		} else {
@@ -104,12 +104,14 @@ function Lazy(arg, debugMode, currentStack) {
 	}
 
 	this.orderBy = function OrderBy(fn, type) {
-		var orderByFn = function(a, b) { var fa=fn(a),fb=fn(b); return (fa < fb ? -1 : fb < fa ? 1 : 0) * (type == "desc" ? -1 : 1); }
+		var lfn = GetLambdaOrFunction(fn);
+		var orderByFn = function(a, b) { var fa=lfn(a),fb=lfn(b); return (fa < fb ? -1 : fb < fa ? 1 : 0) * (type == "desc" ? -1 : 1); }
 		var r = new Lazy(arg, debugMode, stack.append(function OrderBy(collection) { return collection.sort(orderByFn); }));
 
 		r.thenBy = function ThenBy (func, order) {
+			var lfunc = GetLambdaOrFunction(func);
 			var thenByFn = function(a, b) {
-				var fa=fn(a),fb=fn(b),fua=func(a),fub=func(b);
+				var fa=lfn(a),fb=lfn(b),fua=lfunc(a),fub=lfunc(b);
 				return fa == fb
 				 	? (fua < fub ? -1 : (fub < fua ? 1 : 0)) * (order == "desc" ? -1 : 1)
 				 	: (fa < fb ? -1 : (fb < fa ? 1 : 0)) * (type == "desc" ? -1 : 1)
@@ -122,18 +124,9 @@ function Lazy(arg, debugMode, currentStack) {
 	}
 
 	this.distinct = function Distinct(fn) {
-		fn = fn || function(x) { return x; }
-
-		if (typeof fn == "string") {
-			var func = function (x, i, self) {
-				return self.map(function(y) {
-					return eval("y" + (fn && "." + fn))
-				}).indexOf(eval("x" + (fn && "." + fn))) == i;
-			};
-		} else {
-			var func = function(obj, idx, self) { return self.map(fn).indexOf(fn(obj)) == idx; };
-		}
-
+		fn = GetLambdaOrFunction(fn) || function(x) { return x; }
+		
+		var func = function(obj, idx, self) { return self.map(fn).indexOf(fn(obj)) == idx; };
 		return new Lazy(arg, debugMode, stack.append(function Distinct(collection) { return collection.filter(func); }));
 	}
 
