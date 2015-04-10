@@ -28,6 +28,9 @@ Array.prototype.distinct = function(fn) {
 Array.prototype.orderBy = function(fn, order) {
 	return this.toLazy().orderBy(fn, order);
 }
+Array.prototype.append = function(item) {
+	return this.concat([item]);
+}
 
 function Lazy(arg, debugMode, currentStack) {
 	if (!(arg instanceof Array)) throw "Argument must be a collection";
@@ -48,94 +51,63 @@ function Lazy(arg, debugMode, currentStack) {
 		return;
 	}
 
-	this.where = function Where(condition) {
-		var currStack = stack.slice();
+	var GetLambdaOrFunction = function GetLambdaOrFunction(lambda) {
+		if (lambda instanceof Function) return lambda;
+		if (typeof lambda != "string") return;
 
-		if (typeof condition == "string") {
-			var fn = function(x, i, self) { return eval(condition.replace(/\$val/g, "x").replace(/\$index/g, "i").replace(/\$self/g, "self")); };
+		var combinations = lambda.match(/\(?([^\)]*)\)? ?=> ?(.*)/);
+		if (combinations && combinations[1]) {
+			var vars = combinations[1].split(",");
+			var action = combinations[2].replace(vars[0] && (new RegExp(vars[0], "g")) || null, "x").replace(vars[1] && (new RegExp(vars[1], "g")) || null, "i");
+
+			return function(x, i) {
+				return eval(action);
+			}
+
+		} else {
+			throw "Invalid lambda";
 		}
+	}
 
-		currStack.push(function Where(collection) { return collection.filter(fn || condition); });
-		return new Lazy(arg, debugMode, currStack);
+	this.where = function Where(condition) {
+		return new Lazy(arg, debugMode, stack.append(function Where(collection) { return collection.filter(GetLambdaOrFunction(condition)); }));
 	};
 
 	this.select = function Select(condition) {
-		var currStack = stack.slice();
-
-		if (typeof condition == "string") {
-			var fn = function(x, i, self) { return eval(condition.replace(/\$val/g, "x").replace(/\$index/g, "i").replace(/\$self/g, "self")); };
-		}
-
-		currStack.push(function Select(collection) { return collection.map(fn || condition) });
-		return new Lazy(arg, debugMode, currStack);
+		return new Lazy(arg, debugMode, stack.append(function Select(collection) { return collection.map(GetLambdaOrFunction(condition)); }));
 	};
 
 	this.take = function Take(quantity) {
-		var currStack = stack.slice();
-
-		currStack.push(function Take(collection) { return collection.slice(0, quantity); })
-		return new Lazy(arg, debugMode, currStack);
+		return new Lazy(arg, debugMode, stack.append(function Take(collection) { return collection.slice(0, quantity); }));
 	}
 
 	this.skip = function Skip(quantity) {
-		var currStack = stack.slice();
-
-		currStack.push(function Skip(collection) { return collection.slice(quantity); })
-		return new Lazy(arg, debugMode, currStack);
+		return new Lazy(arg, debugMode, stack.append(function Skip(collection) { return collection.slice(quantity); }));
 	}
 
 	this.first = function First(condition) {
-		var currStack = stack.slice();		
-		var firstCondition = condition || (function (_, i) { return i == 0; });
-
-		if (typeof condition == "string") {
-			firstCondition = function(x, i) { return eval(condition.replace(/\$val/g, "x").replace(/\$index/g, "i").replace(/\$self/g, "self")); };
-		} else if(condition) {
-			firstCondition = condition;
-		}
-
-		currStack.push(function First(collection) { return collection.filter(firstCondition).shift() })
-		return new Lazy(arg, debugMode, currStack).invoke();
+		condition = condition || (function (_, i) { return i == 0; });
+		return new Lazy(arg, debugMode, stack.append(function First(collection) { return collection.filter(GetLambdaOrFunction(condition)).shift(); })).invoke();
 	};
 
 	this.last = function Last(condition) {
-		var currStack = stack.slice();
-		var lastCondition = condition || (function (_, i, arr) { return i == arr.length - 1; });
-
-		if (typeof condition == "string") {
-			lastCondition = function(x, i) { return eval(condition.replace(/\$val/g, "x").replace(/\$index/g, "i").replace(/\$self/g, "self")); };
-		} else if(condition) {
-			lastCondition = condition;
-		}
-
-		currStack.push(function Last(collection) { return collection.filter(lastCondition).pop() })
-		return new Lazy(arg, debugMode, currStack).invoke();
+		var condition = condition || (function (_, i, arr) { return i == arr.length - 1; });
+		return new Lazy(arg, debugMode, stack.append(function Last(collection) { return collection.filter(GetLambdaOrFunction(condition)).pop(); })).invoke();
 	};
 
 	this.push = function Push(item) {
-		var currStack = stack.slice();
-
-		currStack.push(function Push(collection) { return collection.concat([item]); });
-		return new Lazy(arg, debugMode, currStack);
+		return new Lazy(arg, debugMode, stack.append(function Push(collection) { return collection.concat([item]); }));
 	}
 
 	this.union = function Union(items) {
-		var currStack = stack.slice();
-
-		currStack.push(function Union(collection) { return collection.concat(items); });
-		return new Lazy(arg, debugMode, currStack);
+		return new Lazy(arg, debugMode, stack.append(function Union(collection) { return collection.concat(items); }));
 	}
 
 	this.orderBy = function OrderBy(fn, type) {
-		var currStack = stack.slice();
 		var orderByFn = function(a, b) { var fa=fn(a),fb=fn(b); return (fa < fb ? -1 : fb < fa ? 1 : 0) * (type == "desc" ? -1 : 1); }
+		var r = new Lazy(arg, debugMode, stack.append(function OrderBy(collection) { return collection.sort(orderByFn); }));
 
-		currStack.push(function OrderBy(collection) { return collection.sort(orderByFn); });
-
-		var r = new Lazy(arg, debugMode, currStack);
 		r.thenBy = function ThenBy (func, order) {
-			var currStack = stack.slice();
-
 			var thenByFn = function(a, b) {
 				var fa=fn(a),fb=fn(b),fua=func(a),fub=func(b);
 				return fa == fb
@@ -143,8 +115,7 @@ function Lazy(arg, debugMode, currentStack) {
 				 	: (fa < fb ? -1 : (fb < fa ? 1 : 0)) * (type == "desc" ? -1 : 1)
 			  }
 
-			currStack.push(function ThenBy(collection) { return collection.sort(thenByFn); });
-			return new Lazy(arg, debugMode, currStack);	
+			return new Lazy(arg, debugMode, stack.append(function ThenBy(collection) { return collection.sort(thenByFn); }));
 		}
 
 		return r;
@@ -152,7 +123,6 @@ function Lazy(arg, debugMode, currentStack) {
 
 	this.distinct = function Distinct(fn) {
 		fn = fn || function(x) { return x; }
-		var currStack = stack.slice();
 
 		if (typeof fn == "string") {
 			var func = function (x, i, self) {
@@ -164,8 +134,7 @@ function Lazy(arg, debugMode, currentStack) {
 			var func = function(obj, idx, self) { return self.map(fn).indexOf(fn(obj)) == idx; };
 		}
 
-		currStack.push(function Distinct(collection) { return collection.filter(func); });
-		return new Lazy(arg, debugMode, currStack);
+		return new Lazy(arg, debugMode, stack.append(function Distinct(collection) { return collection.filter(func); }));
 	}
 
 	this.invoke = function Invoke() {
