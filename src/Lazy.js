@@ -52,7 +52,7 @@ function Lazy(arg, debugMode, currentStack) {
 		var currStack = stack.slice();
 
 		if (typeof condition == "string") {
-			var fn = function(x, i, self) { return eval(condition); };
+			var fn = function(x, i, self) { return eval(condition.replace(/\$val/g, "x").replace(/\$index/g, "i").replace(/\$self/g, "self")); };
 		}
 
 		currStack.push(function Where(collection) { return collection.filter(fn || condition); });
@@ -63,7 +63,7 @@ function Lazy(arg, debugMode, currentStack) {
 		var currStack = stack.slice();
 
 		if (typeof condition == "string") {
-			var fn = function(x, i, self) { return eval(condition); };
+			var fn = function(x, i, self) { return eval(condition.replace(/\$val/g, "x").replace(/\$index/g, "i").replace(/\$self/g, "self")); };
 		}
 
 		currStack.push(function Select(collection) { return collection.map(fn || condition) });
@@ -89,7 +89,7 @@ function Lazy(arg, debugMode, currentStack) {
 		var firstCondition = condition || (function (_, i) { return i == 0; });
 
 		if (typeof condition == "string") {
-			firstCondition = function(x, i) { return eval(condition); };
+			firstCondition = function(x, i) { return eval(condition.replace(/\$val/g, "x").replace(/\$index/g, "i").replace(/\$self/g, "self")); };
 		} else if(condition) {
 			firstCondition = condition;
 		}
@@ -103,7 +103,7 @@ function Lazy(arg, debugMode, currentStack) {
 		var lastCondition = condition || (function (_, i, arr) { return i == arr.length - 1; });
 
 		if (typeof condition == "string") {
-			lastCondition = function(x, i) { return eval(condition); };
+			lastCondition = function(x, i) { return eval(condition.replace(/\$val/g, "x").replace(/\$index/g, "i").replace(/\$self/g, "self")); };
 		} else if(condition) {
 			lastCondition = condition;
 		}
