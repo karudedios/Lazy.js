@@ -1,36 +1,16 @@
-Array.prototype.toLazy = function() {
-	return new Lazy(this);
-}
-Array.prototype.where = function(condition) {
-	return this.toLazy().where(condition);
-}
-Array.prototype.select = function(condition) {
-	return this.toLazy().select(condition);
-}
-Array.prototype.first = function(condition) {
-	return this.toLazy().first(condition);
-}
-Array.prototype.last = function(condition) {
-	return this.toLazy().last(condition);
-}
-Array.prototype.take = function(quantity) {
-	return this.toLazy().take(quantity);
-}
-Array.prototype.skip = function(quantity) {
-	return this.toLazy().skip(quantity);
-}
-Array.prototype.union = function(collection) {
-	return this.toLazy().union(collection);
-}
-Array.prototype.distinct = function(fn) {
-	return this.toLazy().distinct(fn);
-}
-Array.prototype.orderBy = function(fn, order) {
-	return this.toLazy().orderBy(fn, order);
-}
-Array.prototype.append = function(item) {
-	return this.concat([item]);
-}
+Array.prototype.toLazy = function() { return new Lazy(this); }
+
+Array.prototype.where			= function(condition)	{ return this.toLazy().where(condition); }
+Array.prototype.select		= function(condition)	{ return this.toLazy().select(condition); }
+Array.prototype.first			= function(condition)	{ return this.toLazy().first(condition); }
+Array.prototype.last			= function(condition)	{ return this.toLazy().last(condition); }
+Array.prototype.take			= function(quantity)	{ return this.toLazy().take(quantity); }
+Array.prototype.skip			= function(quantity)	{ return this.toLazy().skip(quantity); }
+Array.prototype.union			= function(collection){ return this.toLazy().union(collection); }
+Array.prototype.distinct	= function(fn)				{ return this.toLazy().distinct(fn); }
+Array.prototype.orderBy		= function(fn, order)	{ return this.toLazy().orderBy(fn, order); }
+Array.prototype.groupBy		= function(fn)				{ return this.toLazy().groupBy(fn); }
+Array.prototype.append		= function(item)			{ return this.concat([item]); }
 
 function Lazy(arg, debugMode, currentStack) {
 	if (!(arg instanceof Array)) throw "Argument must be a collection";
@@ -105,18 +85,14 @@ function Lazy(arg, debugMode, currentStack) {
 
 	this.orderBy = function OrderBy(fn, type) {
 		var lfn = GetLambdaOrFunction(fn);
+
 		var orderByFn = function(a, b) { var fa=lfn(a),fb=lfn(b); return (fa < fb ? -1 : fb < fa ? 1 : 0) * (type == "desc" ? -1 : 1); }
 		var r = new Lazy(arg, debugMode, stack.append(function OrderBy(collection) { return collection.sort(orderByFn); }));
 
 		r.thenBy = function ThenBy (func, order) {
 			var lfunc = GetLambdaOrFunction(func);
-			var thenByFn = function(a, b) {
-				var fa=lfn(a),fb=lfn(b),fua=lfunc(a),fub=lfunc(b);
-				return fa == fb
-				 	? (fua < fub ? -1 : (fub < fua ? 1 : 0)) * (order == "desc" ? -1 : 1)
-				 	: (fa < fb ? -1 : (fb < fa ? 1 : 0)) * (type == "desc" ? -1 : 1)
-			  }
 
+			var thenByFn = function(a, b) { var fua=lfunc(a),fub=lfunc(b); return fn(a) == fn(b) ? (fua < fub ? -1 : (fub < fua ? 1 : 0)) * (order == "desc" ? -1 : 1) : orderByFn(a, b) }
 			return new Lazy(arg, debugMode, stack.append(function ThenBy(collection) { return collection.sort(thenByFn); }));
 		}
 
@@ -128,6 +104,12 @@ function Lazy(arg, debugMode, currentStack) {
 		
 		var func = function(obj, idx, self) { return self.map(fn).indexOf(fn(obj)) == idx; };
 		return new Lazy(arg, debugMode, stack.append(function Distinct(collection) { return collection.filter(func); }));
+	}
+
+	this.groupBy = function GroupBy(fn) {
+		fn = GetLambdaOrFunction(fn) || function(x) { return x; }
+
+		return new Lazy(arg, debugMode, stack.append(function GroupBy(collection) { return r=collection.reduce(function(obj, x) { return obj[fn(x)] = (obj[fn(x)] || []).concat(x), obj; }, {}), Object.keys(r).reduce(function(arr, x) { return arr.concat([r[x]]); }, []); }))
 	}
 
 	this.invoke = function Invoke() {
