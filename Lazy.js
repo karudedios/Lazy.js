@@ -217,7 +217,7 @@ function Lazy(arg, debugMode, stack) {
 		return new Lazy(arg, debugMode, extendFunction(distinctFn, stack));
 	}
 
-	if (arg.every(function(x) { return x === Object(x)})) {		
+	if (arg && arg.length && arg.every(function(x) { return x === Object(x)})) {		
 		/**
 		 * Clause to group collection by a property **
 		 * @param  {Function} fn	Property from which the grouping will be executed
@@ -249,10 +249,11 @@ Lazy.prototype.valueOf = function () {
 	return this.invoke().toString();
 }
 
-Lazy.Range = function(from, to) {
-	if (arguments.length == 1) { to = from; from = 0; }
-	to=Math.abs(to),from=Math.abs(from),reverse = false; if(from>to)reverse=true,swap=from,from=to,to=swap;
-	var rangeFn = function Range(collection) { return c=Array.apply(this, { length: to - from + 1 }).map(function(x, i) { return from + i; }),reverse?c.reverse():c};
+Lazy.Range = function(from, to, step) {
+	if (arguments.length == 1) { to = from; from = 0; step=1; }
+	if (arguments.length == 2 || step < 1) { step = 1; }
+	reverse = false; if(from>to)reverse=true,swap=from,from=to,to=swap;
+	var rangeFn = function Range(collection) { return c=Array.apply(this, { length: ((to - from) / step) + 1 }).map(function(x, i) { return from + (step * i); }),reverse?c.reverse():c};
 	return new Lazy([], false, rangeFn);
 }
 
