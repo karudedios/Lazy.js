@@ -249,11 +249,17 @@ Lazy.prototype.valueOf = function () {
 	return this.invoke().toString();
 }
 
+/**
+ * Function that generates a Lazy array
+ * @param {Integer} from	Start of the array
+ * @param {Integer} to		End of the array
+ * @param {Integer} step	Steps
+ * @return {Lazy} 				New instance of Lazy with the array generator function as stack
+ */
 Lazy.Range = function(from, to, step) {
 	if (arguments.length == 1) { to = from; from = 0; step=1; }
 	if (arguments.length == 2 || step < 1) { step = 1; }
-	reverse = false; if(from>to)reverse=true,swap=from,from=to,to=swap;
-	var rangeFn = function Range(collection) { return c=Array.apply(this, { length: ((to - from) / step) + 1 }).map(function(x, i) { return from + (step * i); }),reverse?c.reverse():c};
+	var rangeFn = function Range(collection) { var r = []; if (from>to) for(;r.push(from -= step), from > to;); else for(;r.push(from += step), from < to;); return r; };
 	return new Lazy([], false, rangeFn);
 }
 
