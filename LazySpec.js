@@ -1,12 +1,12 @@
-var Lazy = require('./../src/Lazy.js')
+var Lazy = require('./Lazy.js')
 
 function exactEquality(arr1, arr2) {
 	return (arr1 + '') == (arr2 + '');
 };
 
 describe("Lazy", function() {
-	var lazy, strLazy;
-	var DefaultData = [1, 2, 3, 4, 5, 6, 7];
+	var lazy;
+	var DefaultData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 	
 	beforeEach(function() {
 		lazy = new Lazy(DefaultData);
@@ -94,7 +94,7 @@ describe("Lazy", function() {
 	});
 
 	it("should be able to mix skip and take", function () {
-		var data = DefaultData.slice(4).slice(0, 2);
+		var data = DefaultData.splice(4).splice(0, 2);
 		var result = lazy.skip(4).take(2).invoke();
 
 		var equals = exactEquality(data, result);
@@ -102,7 +102,7 @@ describe("Lazy", function() {
 	});
 
 	it("should not have reference to the collection, but a deep copy", function(){
-		var data = DefaultData.slice(7, 0);
+		var data = DefaultData.splice(7, 0);
 		var result = lazy.skip(7).invoke();
 
 		var equals = exactEquality(data, result);
@@ -115,19 +115,22 @@ describe("Lazy", function() {
 		var validCollection = [{ 0:0 }, { 1:1 }];
 		var exception = "Argument must be a collection";
 		
-		expect(function() { return new Lazy(invalidNumber).invoke(); }).toThrow(exception);
-		expect(function() { return new Lazy(invalidObject).invoke(); }).toThrow(exception);
-		expect(new Lazy(validCollection).invoke()).toBeTruthy();
+		expect(function() { return new Lazy(invalidNumber); }).toThrow(exception);
+		expect(function() { return new Lazy(invalidObject); }).toThrow(exception);
+		expect(new Lazy(validCollection)).toBeTruthy();
 	});
 
 	it("should be present in Array.prototype", function() {
-		expect(Array.prototype.toLazy).toBeTruthy();		
-		expect(Array.prototype.last).toBeTruthy();
-		expect(Array.prototype.skip).toBeTruthy();
-		expect(Array.prototype.take).toBeTruthy();
-		expect(Array.prototype.first).toBeTruthy();
-		expect(Array.prototype.where).toBeTruthy();
-		expect(Array.prototype.union).toBeTruthy();
+		expect(Array.prototype.where).toBeTruthy();		
 		expect(Array.prototype.select).toBeTruthy();
+		expect(Array.prototype.first).toBeTruthy();
+		expect(Array.prototype.last).toBeTruthy();
+		expect(Array.prototype.take).toBeTruthy();
+		expect(Array.prototype.skip).toBeTruthy();
+		expect(Array.prototype.union).toBeTruthy();
+		expect(Array.prototype.distinct).toBeTruthy();
+		expect(Array.prototype.orderBy).toBeTruthy();
+		expect(Array.prototype.groupBy).toBeTruthy();
+		expect(Array.prototype.append).toBeTruthy();
 	});
 });
