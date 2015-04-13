@@ -213,7 +213,7 @@ function Lazy(arg, debugMode, stack) {
 		fn = GetLambdaOrFunction(fn) || function(x) { return x; }
 		
 		var func = function(obj, idx, self) { return self.map(fn).indexOf(fn(obj)) == idx; };
-		var distinctFn = function Distinct(collection) { return collection.filter(func); };
+		var distinctFn = function Distinct(collection) { var o = {}, i, l = collection.length, r = []; for(i=0; i<l;i+=1) o[collection[i]] = collection[i]; for(i in o) r.push(o[i]); return r; };
 		return new Lazy(arg, debugMode, extendFunction(distinctFn, stack));
 	}
 
