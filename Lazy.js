@@ -35,7 +35,7 @@ function Lazy(arg, debugMode, stack) {
 		if (lambda instanceof Function) return lambda;
 		if (typeof lambda != "string") return;
 
-		var combinations = lambda.match(/\(?([^\)]*)\)? ?=> ?(.*)/);
+		var combinations = lambda.match(/\(?([^\)=]*)\)? ?=> ?(.*)/);
 		if (combinations && combinations[1]) {
 			var vars = combinations[1].split(",");
 			var action = combinations[2].replace(vars[0] && (new RegExp(vars[0].trim(), "g")) || null, "$value").replace(vars[1] && (new RegExp(vars[1], "g")) || null, "$index");
