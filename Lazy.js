@@ -59,7 +59,7 @@ function Lazy(arg, debugMode, stack) {
 	 * var extended = extendFunction(x => x + 2)
 	 * var reExtended = extendFunction(x => x - 2, extended)
 	 * var reReExtended = extendFunction(x => x + 4, extended)
-	 * extended(2) ==> 2 // Because 0 + 2 == 2
+	 * extended(0) ==> 2 // Because 0 + 2 == 2
 	 * reExtended(2) ==> 0 // Because (0 + 2) - 2 == 0
 	 * reReExtended(2) ==> 4 // Because ((0 + 2) - 2) + 4 == 4
 	 */
