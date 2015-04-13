@@ -4,6 +4,8 @@ Array.prototype.where			= function(condition)	{ return this.toLazy().where(condi
 Array.prototype.select		= function(condition)	{ return this.toLazy().select(condition); }
 Array.prototype.first			= function(condition)	{ return this.toLazy().first(condition); }
 Array.prototype.last			= function(condition)	{ return this.toLazy().last(condition); }
+Array.prototype.min				= function(condition)	{ return this.toLazy().min(condition); }
+Array.prototype.max				= function(condition)	{ return this.toLazy().max(condition); }
 Array.prototype.take			= function(quantity)	{ return this.toLazy().take(quantity); }
 Array.prototype.skip			= function(quantity)	{ return this.toLazy().skip(quantity); }
 Array.prototype.union			= function(collection){ return this.toLazy().union(collection); }
@@ -117,7 +119,7 @@ function Lazy(arg, debugMode, stack) {
 	/**
 	 * Clause to pick first element that matches the specified criteria**
 	 * @param  {Function} condition Criteria to match
-	 * @return {Lazy}           		New instance of Lazy with new stack
+	 * @return {Object}           	First result of evaluating every clause
 	 * 
 	 * ** If null, will return first element in collection
 	 */
@@ -131,7 +133,7 @@ function Lazy(arg, debugMode, stack) {
 	/**
 	 * Clause to pick last element that matches the specified criteria**
 	 * @param  {Function} condition Criteria to match
-	 * @return {Lazy}								New instance of Lazy with new stack
+	 * @return {Object}							Last result of evaluating every clause
 	 *
 	 * ** If null, will return last element in collection
 	 */
@@ -231,6 +233,28 @@ function Lazy(arg, debugMode, stack) {
 			return new Lazy(arg, debugMode, extendFunction(groupByFn, stack));
 		}
 	};
+
+	/**
+	 * Clause to get Min based on the specified criteria
+	 * @param  {Function} condition Criteria to match
+	 * @return {Object}							Smallest result of evaluating every clause
+	 */
+	this.min = function Min(condition) {
+		condition = GetLambdaOrFunction(condition) || function(x) { return x; }
+		var minFn = function Min(collection) { return collection.orderBy(condition, "asc").invoke() };
+		return new Lazy(arg, debugMode, extendFunction(minFn, stack)).first();
+	}
+
+	/**
+	 * Clause to get Max based on the specified criteria
+	 * @param  {Function} condition Criteria to match
+	 * @return {Object}							Biggest result of evaluating every clause
+	 */
+	this.max = function Max(condition) {
+		condition = GetLambdaOrFunction(condition) || function(x) { return x; }
+		var maxFn = function Max(collection) { return collection.orderBy(condition, "desc").invoke() };
+		return new Lazy(arg, debugMode, extendFunction(maxFn, stack)).first();
+	}
 
 	/**
 	 * Function that calls the stack with the clean array
