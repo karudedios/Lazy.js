@@ -6,12 +6,18 @@ Array.prototype.first			= function(condition)	{ return this.toLazy().first(condi
 Array.prototype.last			= function(condition)	{ return this.toLazy().last(condition); }
 Array.prototype.min				= function(condition)	{ return this.toLazy().min(condition); }
 Array.prototype.max				= function(condition)	{ return this.toLazy().max(condition); }
+Array.prototype.aggregate	= function(condition)	{ return this.toLazy().aggregate(condition); }
+Array.prototype.avg				= function(condition) { return this.toLazy().avg(condition); }
+
 Array.prototype.take			= function(quantity)	{ return this.toLazy().take(quantity); }
 Array.prototype.skip			= function(quantity)	{ return this.toLazy().skip(quantity); }
+
 Array.prototype.union			= function(collection){ return this.toLazy().union(collection); }
-Array.prototype.distinct	= function(fn)				{ return this.toLazy().distinct(fn); }
+
 Array.prototype.orderBy		= function(fn, order)	{ return this.toLazy().orderBy(fn, order); }
+Array.prototype.distinct	= function(fn)				{ return this.toLazy().distinct(fn); }
 Array.prototype.groupBy		= function(fn)				{ return this.toLazy().groupBy(fn); }
+
 Array.prototype.append		= function(item)			{ return this.concat([item]); }
 
 /**
@@ -212,7 +218,7 @@ function Lazy(arg, debugMode, stack) {
 	}
 
 	this.distinct = function Distinct(fn) {
-		fn = GetLambdaOrFunction(fn) || function(x) { return x; }
+		fn = GetLambdaOrFunction(fn) || function(x) { return x; };
 		
 		var func = function(obj, idx, self) { return self.map(fn).indexOf(fn(obj)) == idx; };
 		var distinctFn = function Distinct(collection) { var o = {}, i, l = collection.length, r = []; for(i=0; i<l;i+=1) o[collection[i]] = collection[i]; for(i in o) r.push(o[i]); return r; };
@@ -228,11 +234,20 @@ function Lazy(arg, debugMode, stack) {
 		 * ** Valid for Object-only arrays
 		 */
 		this.groupBy = function GroupBy(fn) {
-			fn = GetLambdaOrFunction(fn) || function(x) { return x; }
+			fn = GetLambdaOrFunction(fn) || function(x) { return x; };
 			var groupByFn = function GroupBy(collection) { return r=collection.reduce(function(obj, x) { return obj[fn(x)] = (obj[fn(x)] || []).concat(x), obj; }, {}), Object.keys(r).reduce(function(arr, x) { return arr.concat([r[x]]); }, []); };
 			return new Lazy(arg, debugMode, extendFunction(groupByFn, stack));
 		}
 	};
+
+	this.aggregate = function Aggregate(condition) {
+		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
+
+		var aggregateFn = function Aggregate(collection) { /*return collection.reduce(function (acc, x) { console.log(condition(x)); return acc + condition(x); });*/ }
+		console.log(arg);
+		arg.reduce(function (acc, x) { console.log(condition(x)) });;
+		return new Lazy(arg, debugMode, extendFunction(aggregateFn, stack)).invoke();
+	}
 
 	/**
 	 * Clause to get Min based on the specified criteria
@@ -240,7 +255,8 @@ function Lazy(arg, debugMode, stack) {
 	 * @return {Object}							Smallest result of evaluating every clause
 	 */
 	this.min = function Min(condition) {
-		condition = GetLambdaOrFunction(condition) || function(x) { return x; }
+		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
+
 		var minFn = function Min(collection) { return collection.orderBy(condition, "asc").invoke() };
 		return new Lazy(arg, debugMode, extendFunction(minFn, stack)).first();
 	}
@@ -251,9 +267,22 @@ function Lazy(arg, debugMode, stack) {
 	 * @return {Object}							Biggest result of evaluating every clause
 	 */
 	this.max = function Max(condition) {
-		condition = GetLambdaOrFunction(condition) || function(x) { return x; }
+		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
+
 		var maxFn = function Max(collection) { return collection.orderBy(condition, "desc").invoke() };
 		return new Lazy(arg, debugMode, extendFunction(maxFn, stack)).first();
+	}
+
+	/**
+	 * Clause to get Avg based on the specified criteria
+	 * @param  {Function} condition	Criteria to match
+	 * @return {Object}							Average result of evaluating every clause
+	 */
+	this.avg = function Avg(condition) {
+		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
+
+		var avgFn = function Avg(collection) { console.log(collection.aggregate(condition)); return collection.aggregate(condition) / collection.length; };
+		return new Lazy(arg, debugMode, extendFunction(avgFn, stack)).invoke();
 	}
 
 	/**
@@ -270,7 +299,7 @@ Lazy.prototype.toString = function () {
 }
 
 Lazy.prototype.valueOf = function () {
-	return this.invoke().toString();
+	return this.toString();
 }
 
 /**
@@ -283,6 +312,7 @@ Lazy.prototype.valueOf = function () {
 Lazy.Range = function(from, to, step) {
 	if (arguments.length == 1) { to = from; from = 0; step=1; }
 	if (arguments.length == 2 || step < 1) { step = 1; }
+
 	var rangeFn = function Range(collection) { var r = []; if (from>to) for(;r.push(from -= step), from > to;); else for(;r.push(from += step), from < to;); return r; };
 	return new Lazy([], false, rangeFn);
 }
