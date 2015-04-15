@@ -22,9 +22,9 @@ Array.prototype.append		= function(item)			{ return this.concat([item]); }
 
 /**
  * Enables lazy evaluation of a collection
- * @param {[Array]} arg         The initial array for the initialization
- * @param {[Bool]} debugMode    Flag to enable loggin
- * @param {[Function]} currentStack The stack that is going to be called when invoked
+ * @param {Array} arg         The initial array for the initialization
+ * @param {Bool} debugMode    Flag to enable loggin
+ * @param {Function}					currentStack The stack that is going to be called when invoked
  * @return {Lazy} A Lazy object
  */
 function Lazy(arg, debugMode, stack) {
@@ -34,10 +34,10 @@ function Lazy(arg, debugMode, stack) {
 
 	/**
 	 * Transform lambda string into a function's body
-	 * @param {String} lambda the Lamda String / Function
+	 * @param {String} 		lambda	The Lamda String / Function
+	 * @return {Function}					The generated function or NULL if not string nor function
 	 * @example
 	 * GetLambdaOrFunction("x => x + 10") ==> function(x) { return x + 10; }
-	 * @return {Function} The generated function or NULL if not string nor function
 	 */
 	function GetLambdaOrFunction(lambda) {
 		if (lambda instanceof Function) return lambda;
@@ -51,7 +51,6 @@ function Lazy(arg, debugMode, stack) {
 			return function($value, $index) {
 				return eval("(".concat(action).concat(")"));
 			}
-
 		} else {
 			throw "Invalid lambda";
 		}
@@ -110,7 +109,7 @@ function Lazy(arg, debugMode, stack) {
 	this.take = function Take(quantity) {
 		var takeFn = function Take(collection) { return collection.slice(0, quantity); };
 		return new Lazy(arg, debugMode, extendFunction(takeFn, stack));
-	}
+	};
 
 	/**
 	 * Clause to skip n records
@@ -120,7 +119,7 @@ function Lazy(arg, debugMode, stack) {
 	this.skip = function Skip(quantity) {
 		var skipFn = function Skip(collection) { return collection.slice(quantity); };
 		return new Lazy(arg, debugMode, extendFunction(skipFn, stack));
-	}
+	};
 
 	/**
 	 * Clause to pick first element that matches the specified criteria**
@@ -159,7 +158,7 @@ function Lazy(arg, debugMode, stack) {
 		if (!(lazyObject instanceof Lazy)) throw "Argument must be a Lazy object, for concatenating a non-Lazy object see 'union' or 'push'";
 		var concatFn = function Concat(collection) { return collection.concat(lazyObject.invoke()); }
 		return new Lazy(arg, debugMode, extendFunction(concatFn, stack));
-	}
+	};
 
 	/**
 	 * Clause to push item into collection
@@ -169,7 +168,7 @@ function Lazy(arg, debugMode, stack) {
 	this.push = function Push(item) {
 		var pushFn = function Push(collection) { return collection.concat([item]); };
 		return new Lazy(arg, debugMode, extendFunction(pushFn, stack));
-	}
+	};
 
 	/**
 	 * Clause to merge a Lazy-collection with a collection
@@ -179,7 +178,7 @@ function Lazy(arg, debugMode, stack) {
 	this.union = function Union(items) {
 		var unionFn = function Union(collection) { return collection.concat(items); };
 		return new Lazy(arg, debugMode, extendFunction(unionFn, stack));
-	}
+	};
 
 	/**
 	 * Clause to order collection based on the specified criteria
@@ -209,21 +208,26 @@ function Lazy(arg, debugMode, stack) {
 			var lfunc = GetLambdaOrFunction(func);
 
 			var thenBySortFn = function(a, b) { var fua=lfunc(a),fub=lfunc(b); return fn(a) == fn(b) ? (fua < fub ? -1 : (fub < fua ? 1 : 0)) * (order == "desc" ? -1 : 1) : orderBySortFn(a, b) }
-			var thenByFn = function OrderBy(collection) { return collection.sort(orderBySortFn); };
+			var thenByFn = function ThenBy(collection) { return collection.sort(thenBySortFn); };
 
 			return new Lazy(arg, debugMode, extendFunction(thenByFn, stack));
 		}
 
 		return r;
-	}
+	};
 
+	/**
+	 * Clause to give unique values in a collection
+	 * @param  {Function} fn	Property from which the distinction will be made
+	 * @return {Lazy}					New instance of Lazy with new stack
+	 */
 	this.distinct = function Distinct(fn) {
 		fn = GetLambdaOrFunction(fn) || function(x) { return x; };
 		
 		var func = function(obj, idx, self) { return self.map(fn).indexOf(fn(obj)) == idx; };
 		var distinctFn = function Distinct(collection) { var o = {}, i, l = collection.length, r = []; for(i=0; i<l;i+=1) o[collection[i]] = collection[i]; for(i in o) r.push(o[i]); return r; };
 		return new Lazy(arg, debugMode, extendFunction(distinctFn, stack));
-	}
+	};
 
 	if (arg && arg.length && arg.every(function(x) { return x === Object(x)})) {		
 		/**
@@ -250,7 +254,7 @@ function Lazy(arg, debugMode, stack) {
 
 		var sumFn = function Sum(collection) { return collection.reduce(function (acc, x) { return acc + condition(x); }, 0); }
 		return new Lazy(arg, debugMode, extendFunction(sumFn, stack)).invoke();
-	}
+	};
 
 	/**
 	 * Clause to get Min based on the specified criteria
@@ -262,7 +266,7 @@ function Lazy(arg, debugMode, stack) {
 
 		var minFn = function Min(collection) { return condition(collection.first(condition)); };
 		return new Lazy(arg, debugMode, extendFunction(minFn, stack)).invoke();
-	}
+	};
 
 	/**
 	 * Clause to get Max based on the specified criteria
@@ -274,7 +278,7 @@ function Lazy(arg, debugMode, stack) {
 
 		var maxFn = function Max(collection) { return condition(collection.last(condition)) };
 		return new Lazy(arg, debugMode, extendFunction(maxFn, stack)).invoke();
-	}
+	};
 
 	/**
 	 * Clause to get Avg based on the specified criteria
@@ -286,14 +290,14 @@ function Lazy(arg, debugMode, stack) {
 
 		var avgFn = function Avg(collection) { return collection.sum(condition) / collection.length; };
 		return new Lazy(arg, debugMode, extendFunction(avgFn, stack)).invoke();
-	}
+	};
 
 	/**
 	 * Function that calls the stack with the clean array
 	 * @return {Object} The result of applying every function on the stack
 	 */
 	this.invoke = function Invoke() {
-		return stack && stack(arg) || arg;
+		return (stack || function(x) { return x; })(arg);
 	};
 };
 
