@@ -6,7 +6,7 @@ Array.prototype.first			= function(condition)	{ return this.toLazy().first(condi
 Array.prototype.last			= function(condition)	{ return this.toLazy().last(condition); }
 Array.prototype.min				= function(condition)	{ return this.toLazy().min(condition); }
 Array.prototype.max				= function(condition)	{ return this.toLazy().max(condition); }
-Array.prototype.aggregate	= function(condition)	{ return this.toLazy().aggregate(condition); }
+Array.prototype.sum				= function(condition)	{ return this.toLazy().sum(condition); }
 Array.prototype.avg				= function(condition) { return this.toLazy().avg(condition); }
 
 Array.prototype.take			= function(quantity)	{ return this.toLazy().take(quantity); }
@@ -240,13 +240,16 @@ function Lazy(arg, debugMode, stack) {
 		}
 	};
 
-	this.aggregate = function Aggregate(condition) {
+	/**
+	 * Clause to get Sum based on the specified criteria
+	 * @param  {Function} condition Criteria to match
+	 * @return {Object}							Sum of evaluating every clause by the specified criteria
+	 */
+	this.sum = function Sum(condition) {
 		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
 
-		var aggregateFn = function Aggregate(collection) { /*return collection.reduce(function (acc, x) { console.log(condition(x)); return acc + condition(x); });*/ }
-		console.log(arg);
-		arg.reduce(function (acc, x) { console.log(condition(x)) });;
-		return new Lazy(arg, debugMode, extendFunction(aggregateFn, stack)).invoke();
+		var sumFn = function Sum(collection) { return collection.reduce(function (acc, x) { return acc + condition(x); }, 0); }
+		return new Lazy(arg, debugMode, extendFunction(sumFn, stack)).invoke();
 	}
 
 	/**
@@ -257,8 +260,8 @@ function Lazy(arg, debugMode, stack) {
 	this.min = function Min(condition) {
 		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
 
-		var minFn = function Min(collection) { return collection.orderBy(condition, "asc").invoke() };
-		return new Lazy(arg, debugMode, extendFunction(minFn, stack)).first();
+		var minFn = function Min(collection) { return condition(collection.first(condition)); };
+		return new Lazy(arg, debugMode, extendFunction(minFn, stack)).invoke();
 	}
 
 	/**
@@ -269,8 +272,8 @@ function Lazy(arg, debugMode, stack) {
 	this.max = function Max(condition) {
 		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
 
-		var maxFn = function Max(collection) { return collection.orderBy(condition, "desc").invoke() };
-		return new Lazy(arg, debugMode, extendFunction(maxFn, stack)).first();
+		var maxFn = function Max(collection) { return condition(collection.last(condition)) };
+		return new Lazy(arg, debugMode, extendFunction(maxFn, stack)).invoke();
 	}
 
 	/**
@@ -281,7 +284,7 @@ function Lazy(arg, debugMode, stack) {
 	this.avg = function Avg(condition) {
 		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
 
-		var avgFn = function Avg(collection) { console.log(collection.aggregate(condition)); return collection.aggregate(condition) / collection.length; };
+		var avgFn = function Avg(collection) { return collection.sum(condition) / collection.length; };
 		return new Lazy(arg, debugMode, extendFunction(avgFn, stack)).invoke();
 	}
 
