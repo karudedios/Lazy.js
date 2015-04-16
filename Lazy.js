@@ -31,6 +31,7 @@ function Lazy(arg, debugMode, stack) {
 	if (!(this instanceof Lazy)) throw "Sorry bro, you gotta 'instantiate' this, and I won't do it for you";
 	if (!(arg instanceof Array)) throw "Argument must be a collection";
 	arg = arg.slice();
+	var defaultFn = function(x) { return x; };
 
 	/**
 	 * Transform lambda string into a function's body
@@ -41,7 +42,7 @@ function Lazy(arg, debugMode, stack) {
 	 */
 	function GetLambdaOrFunction(lambda) {
 		if (lambda instanceof Function) return lambda;
-		if (typeof lambda != "string") return;
+		if (typeof lambda != "string") return defaultFn;
 
 		var combinations = lambda.match(/\(?([^\)=]*)\)? ?=> ?(.*)/);
 		if (combinations && combinations[1]) {
@@ -222,7 +223,7 @@ function Lazy(arg, debugMode, stack) {
 	 * @return {Lazy}					New instance of Lazy with new stack
 	 */
 	this.distinct = function Distinct(fn) {
-		fn = GetLambdaOrFunction(fn) || function(x) { return x; };
+		fn = GetLambdaOrFunction(fn);
 		
 		var func = function(obj, idx, self) { return self.map(fn).indexOf(fn(obj)) == idx; };
 		var distinctFn = function Distinct(collection) { var o = {}, i, l = collection.length, r = []; for(i=0; i<l;i+=1) o[collection[i]] = collection[i]; for(i in o) r.push(o[i]); return r; };
@@ -238,7 +239,7 @@ function Lazy(arg, debugMode, stack) {
 		 * ** Valid for Object-only arrays
 		 */
 		this.groupBy = function GroupBy(fn) {
-			fn = GetLambdaOrFunction(fn) || function(x) { return x; };
+			fn = GetLambdaOrFunction(fn);
 			var groupByFn = function GroupBy(collection) { return r=collection.reduce(function(obj, x) { return obj[fn(x)] = (obj[fn(x)] || []).concat(x), obj; }, {}), Object.keys(r).reduce(function(arr, x) { return arr.concat([r[x]]); }, []); };
 			return new Lazy(arg, debugMode, extendFunction(groupByFn, stack));
 		}
@@ -250,7 +251,7 @@ function Lazy(arg, debugMode, stack) {
 	 * @return {Object}							Sum of evaluating every clause by the specified criteria
 	 */
 	this.sum = function Sum(condition) {
-		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
+		condition = GetLambdaOrFunction(condition);
 
 		var sumFn = function Sum(collection) { return collection.reduce(function (acc, x) { return acc + condition(x); }, 0); }
 		return new Lazy(arg, debugMode, extendFunction(sumFn, stack)).invoke();
@@ -262,7 +263,7 @@ function Lazy(arg, debugMode, stack) {
 	 * @return {Object}							Smallest result of evaluating every clause
 	 */
 	this.min = function Min(condition) {
-		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
+		condition = GetLambdaOrFunction(condition);
 
 		var minFn = function Min(collection) { return condition(collection.first(condition)); };
 		return new Lazy(arg, debugMode, extendFunction(minFn, stack)).invoke();
@@ -274,7 +275,7 @@ function Lazy(arg, debugMode, stack) {
 	 * @return {Object}							Biggest result of evaluating every clause
 	 */
 	this.max = function Max(condition) {
-		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
+		condition = GetLambdaOrFunction(condition);
 
 		var maxFn = function Max(collection) { return condition(collection.last(condition)) };
 		return new Lazy(arg, debugMode, extendFunction(maxFn, stack)).invoke();
@@ -286,7 +287,7 @@ function Lazy(arg, debugMode, stack) {
 	 * @return {Object}							Average result of evaluating every clause
 	 */
 	this.avg = function Avg(condition) {
-		condition = GetLambdaOrFunction(condition) || function(x) { return x; };
+		condition = GetLambdaOrFunction(condition);
 
 		var avgFn = function Avg(collection) { return collection.sum(condition) / collection.length; };
 		return new Lazy(arg, debugMode, extendFunction(avgFn, stack)).invoke();
@@ -297,7 +298,7 @@ function Lazy(arg, debugMode, stack) {
 	 * @return {Object} The result of applying every function on the stack
 	 */
 	this.invoke = function Invoke() {
-		return (stack || function(x) { return x; })(arg);
+		return (stack || defaultFn)(arg);
 	};
 };
 
